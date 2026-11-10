@@ -1,0 +1,22 @@
+{
+  "name": "client",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild public/js/app.js --bundle --outfile=public/bundle.js --format=esm",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@cofhe/sdk": "^0.7.0",
+    "express": "^5.2.1",
+    "open": "^8.4.2",
+    "viem": "^2.55.11"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

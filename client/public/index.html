@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PoC: Onchain-Poker with FHE-encrypted Cards</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <h1>PoC: Onchain-Poker with FHE-encrypted Cards</h1>
+    <div id="wallet-bar">
+      <span id="account">Not connected</span>
+      <span id="status"></span>
+      <button id="btn-connect">Connect</button>
+    </div>
+  </header>
+
+  <!-- ── Tab Nav (hidden until wallet connected) ── -->
+  <nav id="tab-nav" style="display:none">
+    <button class="tab-btn" data-tab="about">About</button>
+    <button class="tab-btn tab-active" data-tab="lobby">Lobby</button>
+    <button class="tab-btn" data-tab="table">Table</button>
+    <span id="eth-balance">—</span>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SCREEN: ABOUT                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div id="screen-about" class="screen" style="display:none">
+    <div class="lobby-card">
+      <h2>About</h2>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SCREEN: LOBBY                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div id="screen-lobby" class="screen" style="display:none">
+
+    <!-- 1. Tournament Info (always shown) -->
+    <div class="lobby-card" id="lobby-info-card">
+      <h2>Tournament Info</h2>
+      <p id="lobby-status" style="margin-bottom:0.7rem; font-size:0.95rem;">Status: No Tournament Scheduled</p>
+      <div class="info-grid" id="lobby-info-grid" style="display:none">
+        <div class="info-item"><span class="info-label">Small Blind</span><span class="info-val" id="ls-sb">—</span></div>
+        <div class="info-item"><span class="info-label">Big Blind</span><span class="info-val" id="ls-bb">—</span></div>
+        <div class="info-item"><span class="info-label">Starting Chips</span><span class="info-val" id="ls-chips">—</span></div>
+        <div class="info-item"><span class="info-label">Hands / Blind Double</span><span class="info-val" id="ls-hpbd">—</span></div>
+        <div class="info-item"><span class="info-label">Hands / Break</span><span class="info-val" id="ls-hp5mb">—</span></div>
+        <div class="info-item"><span class="info-label">Max Seats</span><span class="info-val" id="ls-maxseats">—</span></div>
+        <div class="info-item"><span class="info-label">Players Seated</span><span class="info-val" id="ls-players">—</span></div>
+        <div class="info-item"><span class="info-label">Scheduled Start Time</span><span class="info-val" id="ls-starttime">—</span></div>
+        <div class="info-item"><span class="info-label">Actual Start Time</span><span class="info-val" id="ls-actualstart">—</span></div>
+      </div>
+      <div id="start-tournament-wrap" style="margin-top:0.8rem;">
+        <button id="btn-start" class="btn-action">Start Tournament</button>
+        <p id="start-status" style="display:none; margin-top:0.5rem; font-size:0.85rem;"></p>
+      </div>
+    </div>
+
+    <!-- 2. Join Tournament Table -->
+    <div class="lobby-card" id="lobby-join-card">
+      <h3>Join Tournament Table</h3>
+      <p id="player-seat-status" style="margin-bottom:0.6rem; font-size:0.9rem; color:#aaa;">—</p>
+      <button id="btn-join" class="btn-action">Join Tournament Table</button>
+      <p id="join-status" style="display:none; margin-top:0.6rem; font-size:0.85rem;"></p>
+    </div>
+
+    <!-- 3. Whitelist Player (owner only) -->
+    <div class="lobby-card lobby-card-owner" id="lobby-whitelist-card">
+      <h3>Whitelist Player</h3>
+      <div class="whitelist-row">
+        <input id="input-whitelist-addr" type="text" placeholder="0x..." />
+        <button id="btn-whitelist-add" class="btn-action">Add</button>
+        <button id="btn-whitelist-remove" class="btn-action btn-danger">Remove</button>
+      </div>
+      <p id="whitelist-status" style="display:none; margin-top:0.6rem; font-size:0.85rem;"></p>
+    </div>
+
+    <!-- 4. Create Tournament (owner, no tournament) -->
+    <div class="lobby-card lobby-card-owner" id="lobby-create-card">
+      <h3>Create Tournament</h3>
+      <div class="form-grid">
+        <label>
+          Small Blind <small>(50 – 5000)</small>
+          <input id="input-sb" type="number" value="50" min="50" max="5000" oninput="updateBlindCalc()" />
+        </label>
+        <label>
+          Big Blind <small>(2 SB)</small>
+          <span id="calc-bb" class="info-val">100</span>
+        </label>
+        <label>
+          Starting Chips <small>(100 BB)</small>
+          <span id="calc-chips" class="info-val">10,000</span>
+        </label>
+        <label>
+          Hands per Blind Doubling <small>(5 – 20)</small>
+          <input id="input-hpbd" type="number" value="10" min="5" max="20" />
+        </label>
+        <label>
+          Hands per 5-Min Break <small>(10 – 100)</small>
+          <input id="input-hp5mb" type="number" value="20" min="10" max="100" />
+        </label>
+        <label>
+          Max Seats <small>(2 – 6)</small>
+          <select id="input-maxseats">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6" selected>6</option>
+          </select>
+        </label>
+        <label>
+          Start Time
+          <input id="input-startdate" type="date" />
+        </label>
+        <label>
+          Hour
+          <input id="input-starthour" type="number" min="0" max="23" />
+        </label>
+        <label>
+          Minute
+          <input id="input-startmin" type="number" min="0" max="59" />
+        </label>
+        <button id="btn-create" class="btn-action">Create Tournament</button>
+      </div>
+      <p id="create-status" style="display:none; margin-top:0.6rem; font-size:0.85rem;"></p>
+    </div>
+
+    <!-- 5. Cancel Tournament (owner, tournament exists, not active) -->
+    <div class="lobby-card lobby-card-owner" id="lobby-cancel-card">
+      <h3>Cancel Tournament</h3>
+      <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.7rem;">Cancels the scheduled tournament that has not started yet.</p>
+      <button id="btn-cancel" class="btn-action btn-danger">Cancel Tournament</button>
+      <p id="cancel-status" style="display:none; margin-top:0.6rem; font-size:0.85rem;"></p>
+    </div>
+
+    <!-- 6. Force End Tournament (owner, tournament active) -->
+    <div class="lobby-card lobby-card-owner" id="lobby-force-end-card">
+      <h3>Force End Tournament</h3>
+      <p style="font-size:0.85rem; color:#aaa; margin-bottom:0.7rem;">Emergency use only. Immediately ends the running tournament.</p>
+      <div class="btn-row">
+        <button id="btn-force-end" class="btn-action btn-danger">Force End</button>
+      </div>
+      <p id="force-end-status" style="display:none; margin-top:0.6rem; font-size:0.85rem;"></p>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SCREEN: TABLE                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div id="screen-table" class="screen" style="display:none">
+
+    <!-- Table info strip -->
+    <div id="table-info-strip">
+      <span>Session State: <span class="strip-val" id="session-state">—</span></span>
+      <span>Hand State: <span class="strip-val" id="hand-state">—</span></span>
+      <span>Blinds: <span class="strip-val" id="blinds">—</span></span>
+      <span id="table-error"></span>
+    </div>
+    <div id="spectate-row">
+      <p id="spectate-note" style="display:none"></p>
+      <p id="spectate-owner-note" style="display:none"></p>
+    </div>
+
+    <!-- Game Table -->
+    <div id="game-table">
+      <img id="table-graphic" src="table.png" alt="" />
+
+      <!-- Top seats -->
+      <div class="seat-circle" id="seat-0"><div class="seat-cards card-row" id="cards-0"></div><div class="seat-circle-in"><span class="seat-blind"></span><span class="seat-addr">—</span><span class="seat-chips">—</span><span class="seat-action"></span></div></div>
+      <div class="seat-circle" id="seat-1"><div class="seat-cards card-row" id="cards-1"></div><div class="seat-circle-in"><span class="seat-blind"></span><span class="seat-addr">—</span><span class="seat-chips">—</span><span class="seat-action"></span></div></div>
+      <div class="seat-circle" id="seat-2"><div class="seat-cards card-row" id="cards-2"></div><div class="seat-circle-in"><span class="seat-blind"></span><span class="seat-addr">—</span><span class="seat-chips">—</span><span class="seat-action"></span></div></div>
+
+      <!-- Street currentBet — positions in css/style.css #current-bet-* -->
+      <div class="seat-current-bet" id="current-bet-0">0</div>
+      <div class="seat-current-bet" id="current-bet-1">0</div>
+      <div class="seat-current-bet" id="current-bet-2">0</div>
+      <div class="dealer-button" id="dealer-0" style="display:none">D</div>
+      <div class="dealer-button" id="dealer-1" style="display:none">D</div>
+      <div class="dealer-button" id="dealer-2" style="display:none">D</div>
+
+      <!-- Board -->
+      <div id="board-area">
+        <div id="board-cards-wrap">
+        <div class="board-gear" data-i="0" hidden aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94L14.4 2.81a.49.49 0 0 0-.48-.41h-3.84a.49.49 0 0 0-.47.41L9.25 5.35c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg></div>
+        <div class="board-gear" data-i="1" hidden aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94L14.4 2.81a.49.49 0 0 0-.48-.41h-3.84a.49.49 0 0 0-.47.41L9.25 5.35c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg></div>
+        <div class="board-gear" data-i="2" hidden aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94L14.4 2.81a.49.49 0 0 0-.48-.41h-3.84a.49.49 0 0 0-.47.41L9.25 5.35c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg></div>
+        <div class="board-gear" data-i="3" hidden aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94L14.4 2.81a.49.49 0 0 0-.48-.41h-3.84a.49.49 0 0 0-.47.41L9.25 5.35c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg></div>
+        <div class="board-gear" data-i="4" hidden aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94L14.4 2.81a.49.49 0 0 0-.48-.41h-3.84a.49.49 0 0 0-.47.41L9.25 5.35c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg></div>
+        <div id="board-cards" class="card-row">
+          <div class="card card-back"></div>
+          <div class="card card-back"></div>
+          <div class="card card-back"></div>
+          <div class="card card-back"></div>
+          <div class="card card-back"></div>
+        </div>
+        </div>
+        <div id="pot-display">Total Pot: <strong id="pot">—</strong></div>
+        <div id="runout-status" style="display:none"></div>
+        <div id="resume-countdown" style="display:none"></div>
+      </div>
+      <div id="break-overlay" style="display:none">
+        <div id="break-box">
+          <div id="break-title">5-Minute Break</div>
+          <div id="break-timer">5:00</div>
+        </div>
+      </div>
+      <div id="result-overlay" style="display:none">
+        <div id="result-box">
+          <div id="result-body"></div>
+        </div>
+      </div>
+
+      <!-- Bottom seats -->
+      <div class="seat-circle" id="seat-3"><div class="seat-cards card-row" id="cards-3"></div><div class="seat-circle-in"><span class="seat-blind"></span><span class="seat-addr">—</span><span class="seat-chips">—</span><span class="seat-action"></span></div></div>
+      <div class="seat-circle" id="seat-4"><div class="seat-cards card-row" id="cards-4"></div><div class="seat-circle-in"><span class="seat-blind"></span><span class="seat-addr">—</span><span class="seat-chips">—</span><span class="seat-action"></span></div></div>
+
+      <div class="seat-current-bet" id="current-bet-3">0</div>
+      <div class="seat-current-bet" id="current-bet-4">0</div>
+      <div class="dealer-button" id="dealer-3" style="display:none">D</div>
+      <div class="dealer-button" id="dealer-4" style="display:none">D</div>
+
+      <!-- My Seat -->
+      <div id="my-area">
+        <div class="seat-circle" id="seat-mine">
+          <button id="btn-im-back" style="display:none">I am back</button>
+          <div id="my-cards" class="seat-cards card-row">
+            <div class="card card-back"></div>
+            <div class="card card-back"></div>
+          </div>
+          <div class="seat-circle-in">
+            <span class="seat-blind" id="my-blind"></span>
+            <span class="seat-addr" id="my-addr">—</span>
+            <span class="seat-chips" id="my-chips">—</span>
+            <span class="seat-action" id="my-action"></span>
+          </div>
+        </div>
+        <div id="action-buttons">
+          <div id="turn-timer" class="turn-timer-circle" style="display:none">
+            <span id="turn-timer-value">40</span>
+          </div>
+          <div class="fold-wrap" id="fold-wrap">
+            <button id="btn-fold" class="btn-action btn-danger" aria-label="Fold"></button>
+            <input type="checkbox" id="chk-auto-fold" title="Auto-Fold" />
+            <span class="fold-label" aria-hidden="true">Fold</span>
+          </div>
+          <button id="btn-check-call" class="btn-action">
+            <span id="check-call-label">Check/Call</span>
+            <span id="call-amount"></span>
+          </button>
+          <div class="raise-wrap" id="raise-wrap">
+            <button id="btn-bet-raise" class="btn-action"><span id="bet-raise-label">Bet/Raise-to</span></button>
+            <div class="preset-stepper" id="raise-stepper">
+              <button type="button" id="btn-preset-up" class="preset-step" aria-label="Next preset">▲</button>
+              <span id="preset-value">—</span>
+              <button type="button" id="btn-preset-down" class="preset-step" aria-label="Previous preset">▼</button>
+            </div>
+          </div>
+          <button id="btn-allin" class="btn-action btn-danger">All-In</button>
+        </div>
+      </div>
+      <div class="seat-current-bet" id="my-current-bet">0</div>
+      <div class="dealer-button" id="my-dealer" style="display:none">D</div>
+
+    </div>
+  </div>
+
+  <script>
+    function updateBlindCalc() {
+      const sb = parseInt(document.getElementById('input-sb').value, 10) || 0;
+      const bb = sb * 2;
+      const chips = sb * 200;
+      const grp = n => String(Math.trunc(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      document.getElementById('calc-bb').textContent = grp(bb);
+      document.getElementById('calc-chips').textContent = grp(chips);
+    }
+  </script>
+  <script src="pos-debug.js"></script>
+  <script src="bundle.js?v=100" type="module"></script>
+</body>
+</html>

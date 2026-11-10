@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "hardhat": "^2.29.0",
+    "patch-package": "^8.0.1"
+  },
+  "dependencies": {
+    "@cofhe/hardhat-plugin": "^0.6.1",
+    "@cofhe/mock-contracts": "^0.6.1",
+    "@cofhe/sdk": "^0.6.1",
+    "@fhenixprotocol/cofhe-contracts": "^0.1.4",
+    "dotenv": "^17.4.2"
+  }
+}

@@ -1,0 +1,15 @@
+diff --git a/node_modules/@cofhe/mock-contracts/contracts/MockTaskManager.sol b/node_modules/@cofhe/mock-contracts/contracts/MockTaskManager.sol
+index 6df9568..b4656f6 100644
+--- a/node_modules/@cofhe/mock-contracts/contracts/MockTaskManager.sol
++++ b/node_modules/@cofhe/mock-contracts/contracts/MockTaskManager.sol
+@@ -690,8 +690,8 @@ contract MockTaskManager is ITaskManager, MockCoFHE {
+   // Stub implementations for new ITaskManager interface methods (inc PR #48)
+ 
+   function createRandomTask(uint8 returnType, uint256 seed, int32 securityZone) external returns (uint256) {
+-    // Mock implementation: just return a pseudo-random hash based on seed
+-    return uint256(keccak256(abi.encode(returnType, seed, securityZone, block.timestamp)));
++    uint256 rawHash = uint256(keccak256(abi.encode(returnType, seed, securityZone, block.timestamp)));
++    return TMCommon.appendMetadata(rawHash, securityZone, returnType, false);
+   }
+ 
+   function isPubliclyAllowed(uint256 ctHash) external view returns (bool) {

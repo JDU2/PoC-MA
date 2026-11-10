@@ -1,0 +1,24 @@
+node_modules
+.env
+
+# Bundled output (generated — do not commit)
+client/public/bundle.js
+
+# Local debug tool and thesis draft
+client/public/pos-debug.js
+Thesis.txt
+
+# Hardhat files
+/cache
+/artifacts
+
+# TypeChain files
+/typechain
+/typechain-types
+
+# solidity-coverage files
+/coverage
+/coverage.json
+
+# Hardhat Ignition default folder for deployments against a local node
+ignition/deployments/chain-31337
